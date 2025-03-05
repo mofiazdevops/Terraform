@@ -73,3 +73,58 @@ resource "azurerm_public_ip" "publicip1" {
   }
   depends_on = [ azurerm_resource_group.RG ]           # Ensures the Resource_group is created after Public_IP
 }
+
+resource "azurerm_network_security_group" "NSG" {
+  name                = "Al-nafi-nsg"
+  location            = local.location
+  resource_group_name = local.resource_group_name
+  security_rule {
+    name                       = "test123"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"                # it means anywhere of the world 
+    destination_port_range     = "22,80"            # Allow port
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  tags = {
+    environment = "Al-nafi"
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "nsg-association" {
+  subnet_id                 = azurerm_subnet.subnetA.id
+  network_security_group_id = azurerm_network_security_group.NSG.id
+}
+
+resource "azurerm_linux_virtual_machine" "vm" {
+  name                = "demo-server"
+  resource_group_name = local.resource_group_name
+  location            = local.location
+  size                = "Standard_DS1_v2"
+  admin_username      = "adminuser"
+  network_interface_ids = [
+    azurerm_network_interface.NIC.id,
+  ]
+
+  admin_ssh_key {
+    username   = "adminuser"
+    public_key = file("home/codespace/.ssh/id_rsa.pub")          # Path where our ssh_key file are exsist 
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+  depends_on = [ azurerm_network_interface.NIC,azurerm_resource_group.RG ] 
+}
