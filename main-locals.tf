@@ -24,23 +24,29 @@ resource "azurerm_resource_group" "RG" {
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "al-nafi-net"
+  name                = local.virtual_network.name          
   location            = local.location
   resource_group_name = local.resource_group_name
-  address_space       = ["10.0.0.0/16"]
-
-  subnet {
-    name             = "Custome-subnet1"
-    address_prefixes = ["10.0.1.0/24"]
-  }
-
-  subnet {
-    name             = "Custome-subnet2"          # Name of the subnet
-    address_prefixes = ["10.0.2.0/24"]             # CIDR block defining the subnet range 
-  }
+  address_space       = [local.virtual_network.address_space]  
     depends_on = [ azurerm_resource_group.RG ]   # Ensures the resource group is created before this subnet
 
   tags = {
     environment = "Production"
   }
+}
+
+resource "azurerm_subnet" "subnetA" {           # Now Create sperate subnet_block
+  name                 = local.subnets[0].name
+  resource_group_name  = local.resource_group_name
+  virtual_network_name = local.virtual_network.name
+  address_prefixes     = local.subnets[0].address_prefix
+  depends_on = [ azurerm_virtual_network.vnet ]            # Ensures the virtual_network is created before subnet
+}
+
+resource "azurerm_subnet" "subnetB" {
+  name                 = local.subnets[1].name
+  resource_group_name  = local.resource_group_name
+  virtual_network_name = local.virtual_network.name
+  address_prefixes     = local.subnets[1].address_prefix
+  depends_on = [ azurerm_virtual_network.vnet ]             # Ensures the virtual_network is created before subnet
 }
